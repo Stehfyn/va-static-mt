@@ -1,0 +1,107 @@
+diff --git a/subprojects/libva.wrap b/subprojects/libva.wrap
+index b54516d8f5f..7fbc42402b8 100644
+--- a/subprojects/libva.wrap
++++ b/subprojects/libva.wrap
+@@ -1,8 +1,8 @@
+-[wrap-file]
+-directory = libva-2.22.0
+-source_url = https://github.com/intel/libva/archive/refs/tags/2.22.0.tar.gz
+-source_filename = 2.22.0.tar.gz
+-source_hash = 467c418c2640a178c6baad5be2e00d569842123763b80507721ab87eb7af8735
++[wrap-git]
++directory = libva-2.24.1
++url = https://github.com/intel/libva.git
++revision = 710eb465c6277ee2cac3e6948767b01eebe7e77a
++depth = 1
+ 
+ [provide]
+ libva = libva_dep
+diff --git a/subprojects/libva-2.24.1/va/meson.build b/subprojects/libva-2.24.1/va/meson.build
+index 6005cf8..0fb4197 100644
+--- a/subprojects/libva-2.24.1/va/meson.build
++++ b/subprojects/libva-2.24.1/va/meson.build
+@@ -68,12 +68,11 @@ endif
+ 
+ install_headers(libva_headers, subdir : 'va')
+ 
+-libva = shared_library(
++libva = library(
+   'va',
+   sources : libva_sources +
+             libva_headers +
+             libva_headers_priv,
+-  vs_module_defs : 'libva.def',
+   soversion : host_machine.system() == 'windows' ? '' : libva_lt_current,
+   version : libva_lt_version,
+   c_args : [ '-DSYSCONFDIR="' + sysconfdir + '"'] + ['-DVA_DRIVERS_PATH="' + driverdir + '"'],
+@@ -310,7 +309,7 @@ if WITH_WIN32
+ 
+   install_headers(libva_win32_headers, subdir : 'va')
+ 
+-  libva_win32 = shared_library(
++  libva_win32 = library(
+     'va_win32',
+     sources : libva_win32_sources +
+               libva_win32_headers,
+@@ -318,7 +317,6 @@ if WITH_WIN32
+     version : libva_lt_version,
+     install : true,
+     c_args : libva_win32_args,
+-    vs_module_defs : 'libva_win32.def',
+     dependencies : deps)
+ 
+   libva_win32_dep = declare_dependency(
+diff --git a/subprojects/libva-2.24.1/va/va.c b/subprojects/libva-2.24.1/va/va.c
+index d87661a..f100380 100644
+--- a/subprojects/libva-2.24.1/va/va.c
++++ b/subprojects/libva-2.24.1/va/va.c
+@@ -39,7 +39,6 @@
+ #if defined(_WIN32)
+ #include "compat_win32.h"
+ #define DRIVER_EXTENSION    "_drv_video.dll"
+-#define DRIVER_PATH_STRING  "%s\\%s%s"
+ #define ENV_VAR_SEPARATOR ";"
+ #else
+ #include <dlfcn.h>
+@@ -342,14 +341,23 @@ va_getDriverInitName(char *name, int namelen, int major, int minor)
+ 
+ static char *va_getDriverPath(const char *driver_dir, const char *driver_name)
+ {
++#if defined(_WIN32)
++    (void)driver_dir;
++    int n = snprintf(0, 0, "%s%s", driver_name, DRIVER_EXTENSION);
++#else
+     int n = snprintf(0, 0, DRIVER_PATH_STRING, driver_dir, driver_name, DRIVER_EXTENSION);
++#endif
+     if (n < 0)
+         return NULL;
+     char *driver_path = (char *) malloc(n + 1);
+     if (!driver_path)
+         return NULL;
++#if defined(_WIN32)
++    n = snprintf(driver_path, n + 1, "%s%s", driver_name, DRIVER_EXTENSION);
++#else
+     n = snprintf(driver_path, n + 1, DRIVER_PATH_STRING,
+                  driver_dir, driver_name, DRIVER_EXTENSION);
++#endif
+     if (n < 0) {
+         free(driver_path);
+         return NULL;
+@@ -365,11 +373,17 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
+     char *saveptr;
+     char *driver_dir;
+ 
++#if defined(_WIN32)
++    /* Pass a basename to LoadLibrary so Windows applies its normal DLL search
++     * policy, including the application directory. */
++    search_path = driver_name;
++#else
+     if (geteuid() == getuid())
+         /* don't allow setuid apps to use LIBVA_DRIVERS_PATH */
+         search_path = secure_getenv("LIBVA_DRIVERS_PATH");
+     if (!search_path)
+         search_path = VA_DRIVERS_PATH;
++#endif
+ 
+     search_path = strdup((const char *)search_path);
+     if (!search_path) {
