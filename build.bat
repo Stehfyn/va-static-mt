@@ -5,22 +5,8 @@ set "HERE=%~dp0"
 pushd "%HERE%" || exit /b 1
 call "scripts\versions.bat" || goto :failure
 
-rem Host contract: no caller-defined build options are consumed. VULKAN_SDK is
-rem the only required environment variable; Visual Studio is found by vswhere.
-if not defined VULKAN_SDK (
-    echo VULKAN_SDK is not set.>&2
-    goto :failure
-)
-for %%I in ("%VULKAN_SDK%") do set "ACTUAL_VULKAN_SDK_VERSION=%%~nxI"
-if not "!ACTUAL_VULKAN_SDK_VERSION!"=="%VULKAN_SDK_VERSION%" (
-    echo Vulkan SDK %VULKAN_SDK_VERSION% is required; VULKAN_SDK is "%VULKAN_SDK%".>&2
-    goto :failure
-)
-if not exist "%VULKAN_SDK%\Bin\glslangValidator.exe" (
-    echo VULKAN_SDK does not contain Bin\glslangValidator.exe.>&2
-    goto :failure
-)
-set "PATH=%VULKAN_SDK%\Bin;%PATH%"
+rem Host contract: no caller-defined build options are consumed. Visual Studio
+rem is found by vswhere.
 for %%T in (git.exe curl.exe tar.exe certutil.exe py.exe) do (
     where.exe %%T >nul 2>&1 || (
         echo Required command is not on PATH: %%T.>&2
@@ -42,7 +28,7 @@ if not defined VSCMD_VER (
     call "!VSINSTALL!\VC\Auxiliary\Build\vcvarsall.bat" amd64
     if errorlevel 1 goto :failure
 )
-for %%T in (cl.exe link.exe lib.exe dumpbin.exe glslangValidator.exe) do (
+for %%T in (cl.exe link.exe lib.exe dumpbin.exe) do (
     where.exe %%T >nul 2>&1 || (
         echo Required build command is not on PATH: %%T.>&2
         goto :failure

@@ -87,13 +87,14 @@ index d87661a..f100380 100644
      if (n < 0) {
          free(driver_path);
          return NULL;
-@@ -365,11 +373,17 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
+@@ -365,11 +373,18 @@ static VAStatus va_openDriver(VADisplay dpy, char *driver_name)
      char *saveptr;
      char *driver_dir;
  
 +#if defined(_WIN32)
-+    /* Pass a basename to LoadLibrary so Windows applies its normal DLL search
-+     * policy, including the application directory. */
++    /* Use the driver stem as the single search token. va_getDriverPath appends
++     * _drv_video.dll without a directory so LoadLibrary applies the normal
++     * Windows DLL search policy, including the application directory. */
 +    search_path = driver_name;
 +#else
      if (geteuid() == getuid())

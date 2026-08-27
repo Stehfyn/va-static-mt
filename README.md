@@ -9,7 +9,6 @@ artifact-pinned in `scripts/python-requirements.lock`.
 ## Prerequisites
 
 - Visual Studio with the C++ workload and a Windows SDK
-- Vulkan SDK 1.4.335.0, with `VULKAN_SDK` set by its installer
 - Git, curl, tar, certutil, and the Python 3.12 launcher on `PATH`
 - Network access to the official source repositories on each clean build
 
@@ -41,6 +40,9 @@ The driver build contains D3D12 VA H.264 encoding only. OpenGL, EGL, GLES, GBM,
 GLX, LLVM, Vulkan drivers, zlib, zstd, tests, and unrelated Gallium drivers are
 disabled. Verification rejects non-static CRT directives, missing symbols, or
 any driver import outside the four expected Windows system DLLs.
+
+The Vulkan SDK is not required. Mesa probes for `glslangValidator` when it is
+available, but none of the enabled VA-on-12 build targets uses it.
 
 The libva patch passes only `vaon12_drv_video.dll` to `LoadLibrary`. A consuming
 application can place the DLL beside its executable; it does not need
